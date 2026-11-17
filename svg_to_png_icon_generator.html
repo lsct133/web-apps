@@ -1,1 +1,434 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Universal SVG to PNG Converter</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .transparency-grid {
+      background-color: #1e293b;
+      background-image: 
+        linear-gradient(45deg, #0f172a 25%, transparent 25%), 
+        linear-gradient(-45deg, #0f172a 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, #0f172a 75%), 
+        linear-gradient(-45deg, transparent 75%, #0f172a 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    }
+    .transparency-grid-light {
+      background-color: #ffffff;
+      background-image: 
+        linear-gradient(45deg, #f1f5f9 25%, transparent 25%), 
+        linear-gradient(-45deg, #f1f5f9 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, #f1f5f9 75%), 
+        linear-gradient(-45deg, transparent 75%, #f1f5f9 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col items-center justify-between p-4 sm:p-8">
+
+  <!-- Header -->
+  <header class="w-full max-w-5xl text-center mb-6">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700 text-xs font-medium text-emerald-400 mb-2">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      Client-side Vector Rasterizer • High Quality 32-bit RGBA
+    </div>
+    <h1 class="text-2xl sm:text-4xl font-bold tracking-tight text-white">SVG to PNG Converter</h1>
+    <p class="text-sm text-slate-400 mt-1">Convert any SVG vector file or markup into crisp, high-resolution PNG images directly in your browser</p>
+  </header>
+
+  <!-- Main Grid -->
+  <main class="w-full max-w-5xl bg-slate-800/70 backdrop-blur border border-slate-700/80 rounded-2xl p-6 sm:p-8 shadow-2xl flex flex-col lg:flex-row gap-8 items-start">
+    
+    <!-- Left Column: Visual Preview Canvas -->
+    <div class="flex flex-col items-center w-full lg:w-auto flex-shrink-0">
+      <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center justify-between w-full">
+        <span>Canvas Preview</span>
+        <span id="canvasDimLabel" class="text-emerald-400 font-mono">512 × 512 px</span>
+      </div>
+
+      <!-- Checkerboard Preview Box -->
+      <div id="previewContainer" class="transparency-grid rounded-2xl p-4 border border-slate-700 flex items-center justify-center shadow-inner relative w-full sm:w-[320px] h-[320px] overflow-hidden">
+        <canvas id="exportCanvas" class="max-w-full max-h-full block rounded-lg transition-transform duration-200"></canvas>
+      </div>
+
+      <!-- Preview Options -->
+      <div class="mt-3 flex items-center justify-between w-full text-xs text-slate-400 px-1">
+        <span>Background backdrop:</span>
+        <button id="toggleBgBtn" type="button" class="px-2.5 py-1 rounded bg-slate-700 hover:bg-slate-600 text-slate-200 transition">Dark Grid</button>
+      </div>
+    </div>
+
+    <!-- Right Column: Upload, Settings, Dimensions & Actions -->
+    <div class="flex flex-col justify-between flex-grow w-full space-y-6">
+      
+      <!-- Upload / Paste SVG Box -->
+      <div>
+        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Source SVG</label>
+        
+        <div id="dropZone" class="border-2 border-dashed border-slate-600 hover:border-emerald-400/80 bg-slate-900/40 hover:bg-slate-900/80 rounded-xl p-5 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2 group">
+          <input type="file" id="fileInput" accept=".svg,image/svg+xml" class="hidden">
+          <svg class="w-8 h-8 text-slate-400 group-hover:text-emerald-400 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+          </svg>
+          <div class="text-xs text-slate-300">
+            <span class="font-semibold text-emerald-400 underline">Browse file</span> or drag & drop SVG here
+          </div>
+          <span class="text-[11px] text-slate-500">Supports all standard SVGs, paths, gradients, and symbols</span>
+        </div>
+
+        <div id="fileStatus" class="hidden mt-2 text-xs flex items-center justify-between text-slate-300 bg-slate-900/60 px-3 py-2 rounded-lg border border-slate-700">
+          <span id="fileName" class="truncate max-w-[260px] font-mono text-emerald-300"></span>
+          <button id="resetSvgBtn" class="text-xs text-rose-400 hover:underline">Clear & Reset</button>
+        </div>
+
+        <!-- Direct SVG Code Paste Dropdown/Toggle -->
+        <details class="mt-2 text-xs text-slate-400 group">
+          <summary class="cursor-pointer hover:text-slate-200 select-none">Or paste raw &lt;svg&gt; code</summary>
+          <div class="mt-2">
+            <textarea id="svgTextInput" rows="4" placeholder="<svg xmlns='http://www.w3.org/2000/svg' ...>...</svg>" class="w-full bg-slate-900/80 border border-slate-700 rounded-lg p-2.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-emerald-400 resize-y"></textarea>
+            <button id="applySvgTextBtn" type="button" class="mt-1.5 px-3 py-1 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-xs transition">Apply SVG Markup</button>
+          </div>
+        </details>
+      </div>
+
+      <!-- Dimension Configuration -->
+      <div class="bg-slate-900/50 rounded-xl p-4 border border-slate-700/60 space-y-4">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-300">Output Resolution</span>
+          <label class="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer select-none">
+            <input type="checkbox" id="lockAspect" checked class="rounded border-slate-700 text-emerald-500 focus:ring-0">
+            <span>Lock aspect ratio</span>
+          </label>
+        </div>
+
+        <!-- Custom Inputs -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Width (px)</label>
+            <input type="number" id="inputWidth" min="16" max="8192" value="512" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono text-white focus:outline-none focus:border-emerald-400">
+          </div>
+          <div>
+            <label class="block text-[11px] text-slate-400 mb-1">Height (px)</label>
+            <input type="number" id="inputHeight" min="16" max="8192" value="512" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm font-mono text-white focus:outline-none focus:border-emerald-400">
+          </div>
+        </div>
+
+        <!-- Quick Preset Resolutions -->
+        <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-800">
+          <span class="text-[11px] text-slate-400">Quick presets:</span>
+          <button data-size="64" class="size-btn px-2 py-0.5 rounded text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 transition">64px</button>
+          <button data-size="128" class="size-btn px-2 py-0.5 rounded text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 transition">128px</button>
+          <button data-size="256" class="size-btn px-2 py-0.5 rounded text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 transition">256px</button>
+          <button data-size="512" class="size-btn px-2 py-0.5 rounded text-xs bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-semibold transition">512px</button>
+          <button data-size="1024" class="size-btn px-2 py-0.5 rounded text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 transition">1024px</button>
+          <button data-size="2048" class="size-btn px-2 py-0.5 rounded text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 transition">2048px (2K)</button>
+        </div>
+      </div>
+
+      <!-- Export Action -->
+      <div>
+        <button id="downloadBtn" type="button" class="w-full group relative flex items-center justify-center gap-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-emerald-500/20 active:scale-[0.99] transition duration-150">
+          <svg class="w-5 h-5 transition-transform group-hover:-translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+          </svg>
+          <span id="downloadBtnLabel" class="text-base">Download 512×512 PNG</span>
+        </button>
+        <p class="text-[11px] text-slate-500 text-center mt-2">Full alpha transparency preserved &bull; Processed securely entirely in-browser</p>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Default Sample SVG Placeholder (Geometric Star / Logo) -->
+  <div class="hidden">
+    <svg id="defaultSvg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+      <defs>
+        <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#10b981"/>
+          <stop offset="50%" stop-color="#06b6d4"/>
+          <stop offset="100%" stop-color="#3b82f6"/>
+        </linearGradient>
+        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#06b6d4" flood-opacity="0.4"/>
+        </filter>
+      </defs>
+      <rect x="32" y="32" width="448" height="448" rx="112" fill="url(#bgGrad)" filter="url(#glow)"/>
+      <path d="M256 120 L290 200 L376 212 L314 272 L328 358 L256 320 L184 358 L198 272 L136 212 L222 200 Z" fill="#ffffff" opacity="0.95"/>
+    </svg>
+  </div>
+
+  <footer class="mt-6 text-center text-xs text-slate-500">
+    Zero server uploads &bull; Pure HTML5 Canvas & SVG rasterization
+  </footer>
+
+  <script>
+    let currentSvgString = '';
+    let currentBaseName = 'converted-vector';
+    let intrinsicWidth = 512;
+    let intrinsicHeight = 512;
+
+    const canvas = document.getElementById('exportCanvas');
+    const ctx = canvas.getContext('2d');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const downloadBtnLabel = document.getElementById('downloadBtnLabel');
+    const defaultSvgEl = document.getElementById('defaultSvg');
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileStatus = document.getElementById('fileStatus');
+    const fileNameSpan = document.getElementById('fileName');
+    const resetSvgBtn = document.getElementById('resetSvgBtn');
+    const toggleBgBtn = document.getElementById('toggleBgBtn');
+    const previewContainer = document.getElementById('previewContainer');
+    const sizeButtons = document.querySelectorAll('.size-btn');
+    const inputWidth = document.getElementById('inputWidth');
+    const inputHeight = document.getElementById('inputHeight');
+    const lockAspect = document.getElementById('lockAspect');
+    const canvasDimLabel = document.getElementById('canvasDimLabel');
+    const svgTextInput = document.getElementById('svgTextInput');
+    const applySvgTextBtn = document.getElementById('applySvgTextBtn');
+
+    function getDefaultSvgString() {
+      return new XMLSerializer().serializeToString(defaultSvgEl);
+    }
+
+    // Inspect SVG attributes to get base aspect ratio/dimensions
+    function parseSvgDimensions(svgText) {
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(svgText, 'image/svg+xml');
+        const svg = doc.querySelector('svg');
+        if (!svg) return { width: 512, height: 512 };
+
+        let w = parseFloat(svg.getAttribute('width'));
+        let h = parseFloat(svg.getAttribute('height'));
+
+        if ((!w || !h) && svg.getAttribute('viewBox')) {
+          const parts = svg.getAttribute('viewBox').trim().split(/[\s,]+/);
+          if (parts.length === 4) {
+            w = parseFloat(parts[2]);
+            h = parseFloat(parts[3]);
+          }
+        }
+
+        return {
+          width: w && !isNaN(w) ? Math.round(w) : 512,
+          height: h && !isNaN(h) ? Math.round(h) : 512
+        };
+      } catch (e) {
+        return { width: 512, height: 512 };
+      }
+    }
+
+    function renderSvgToCanvas(svgText, targetWidth, targetHeight) {
+      const w = Math.max(1, parseInt(targetWidth, 10) || 512);
+      const h = Math.max(1, parseInt(targetHeight, 10) || 512);
+
+      canvas.width = w;
+      canvas.height = h;
+
+      canvasDimLabel.textContent = `${w} × ${h} px`;
+      downloadBtnLabel.textContent = `Download ${w}×${h} PNG`;
+
+      let cleanSvg = svgText;
+      if (!cleanSvg.includes('xmlns="http://www.w3.org/2000/svg"')) {
+        cleanSvg = cleanSvg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+      }
+
+      const blob = new Blob([cleanSvg], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+
+      img.onload = () => {
+        ctx.clearRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        URL.revokeObjectURL(url);
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        displayMessage('Error parsing SVG syntax. Please check the vector structure.');
+      };
+
+      img.src = url;
+    }
+
+    function displayMessage(msg) {
+      const banner = document.createElement('div');
+      banner.className = 'fixed bottom-5 right-5 bg-rose-600 text-white px-4 py-2.5 rounded-lg text-sm shadow-xl z-50 flex items-center gap-2';
+      banner.innerHTML = `<span>${msg}</span>`;
+      document.body.appendChild(banner);
+      setTimeout(() => banner.remove(), 4000);
+    }
+
+    function downloadPng() {
+      try {
+        const dataUrl = canvas.toDataURL('image/png');
+        const downloadLink = document.createElement('a');
+        downloadLink.download = `${currentBaseName}-${canvas.width}x${canvas.height}.png`;
+        downloadLink.href = dataUrl;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+      } catch (err) {
+        displayMessage('Failed to export canvas: ' + err.message);
+      }
+    }
+
+    function loadSvgContent(content, fileName = 'custom-vector') {
+      currentSvgString = content;
+      currentBaseName = fileName.replace(/\.[^/.]+$/, '');
+      const dims = parseSvgDimensions(content);
+      intrinsicWidth = dims.width;
+      intrinsicHeight = dims.height;
+
+      inputWidth.value = intrinsicWidth;
+      inputHeight.value = intrinsicHeight;
+
+      // Reset preset active highlights
+      sizeButtons.forEach(b => b.className = 'size-btn px-2 py-0.5 rounded text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 transition');
+
+      renderSvgToCanvas(currentSvgString, intrinsicWidth, intrinsicHeight);
+    }
+
+    function handleFile(file) {
+      if (!file) return;
+      if (!file.name.endsWith('.svg') && file.type !== 'image/svg+xml') {
+        displayMessage('Please select a valid .svg file.');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        loadSvgContent(e.target.result, file.name);
+        fileNameSpan.textContent = file.name;
+        fileStatus.classList.remove('hidden');
+      };
+      reader.readAsText(file);
+    }
+
+    // Input Dimension Listeners
+    inputWidth.addEventListener('input', () => {
+      const w = parseInt(inputWidth.value, 10);
+      if (lockAspect.checked && intrinsicWidth > 0) {
+        const h = Math.round(w * (intrinsicHeight / intrinsicWidth));
+        inputHeight.value = isNaN(h) ? w : h;
+      }
+      renderSvgToCanvas(currentSvgString, inputWidth.value, inputHeight.value);
+    });
+
+    inputHeight.addEventListener('input', () => {
+      const h = parseInt(inputHeight.value, 10);
+      if (lockAspect.checked && intrinsicHeight > 0) {
+        const w = Math.round(h * (intrinsicWidth / intrinsicHeight));
+        inputWidth.value = isNaN(w) ? h : w;
+      }
+      renderSvgToCanvas(currentSvgString, inputWidth.value, inputHeight.value);
+    });
+
+    // Preset Size Buttons
+    sizeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sz = parseInt(btn.getAttribute('data-size'), 10);
+        sizeButtons.forEach(b => {
+          b.className = 'size-btn px-2 py-0.5 rounded text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 transition';
+        });
+        btn.className = 'size-btn px-2 py-0.5 rounded text-xs bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-semibold transition';
+
+        if (lockAspect.checked && intrinsicWidth > 0 && intrinsicHeight > 0) {
+          const ratio = intrinsicHeight / intrinsicWidth;
+          inputWidth.value = sz;
+          inputHeight.value = Math.round(sz * ratio);
+        } else {
+          inputWidth.value = sz;
+          inputHeight.value = sz;
+        }
+
+        renderSvgToCanvas(currentSvgString, inputWidth.value, inputHeight.value);
+      });
+    });
+
+    // Textarea apply
+    applySvgTextBtn.addEventListener('click', () => {
+      const val = svgTextInput.value.trim();
+      if (!val) return;
+      loadSvgContent(val, 'pasted-svg');
+      fileNameSpan.textContent = 'pasted-vector.svg';
+      fileStatus.classList.remove('hidden');
+    });
+
+    // Reset button
+    resetSvgBtn.addEventListener('click', () => {
+      currentSvgString = getDefaultSvgString();
+      currentBaseName = 'sample-vector';
+      intrinsicWidth = 512;
+      intrinsicHeight = 512;
+      inputWidth.value = 512;
+      inputHeight.value = 512;
+      fileStatus.classList.add('hidden');
+      fileInput.value = '';
+      svgTextInput.value = '';
+      renderSvgToCanvas(currentSvgString, 512, 512);
+    });
+
+    // Toggle Preview background
+    let isDarkGrid = true;
+    toggleBgBtn.addEventListener('click', () => {
+      isDarkGrid = !isDarkGrid;
+      if (isDarkGrid) {
+        previewContainer.className = 'transparency-grid rounded-2xl p-4 border border-slate-700 flex items-center justify-center shadow-inner relative w-full sm:w-[320px] h-[320px] overflow-hidden';
+        toggleBgBtn.textContent = 'Dark Grid';
+      } else {
+        previewContainer.className = 'transparency-grid-light rounded-2xl p-4 border border-slate-300 flex items-center justify-center shadow-inner relative w-full sm:w-[320px] h-[320px] overflow-hidden';
+        toggleBgBtn.textContent = 'Light Grid';
+      }
+    });
+
+    // Drag and drop & input handlers
+    downloadBtn.addEventListener('click', downloadPng);
+    dropZone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+    ['dragenter', 'dragover'].forEach(name => {
+      dropZone.addEventListener(name, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.add('border-emerald-400', 'bg-slate-800');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(name => {
+      dropZone.addEventListener(name, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZone.classList.remove('border-emerald-400', 'bg-slate-800');
+      });
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    // Initialize with default
+    window.onload = function () {
+      currentSvgString = getDefaultSvgString();
+      currentBaseName = 'sample-vector';
+      renderSvgToCanvas(currentSvgString, 512, 512);
+    };
+  </script>
+</body>
+</html>
