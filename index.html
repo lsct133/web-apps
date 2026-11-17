@@ -1,1 +1,76 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Web Utilities</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+    }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      max-width: 800px;
+      margin: 3rem auto;
+      padding: 0 1.5rem;
+      line-height: 1.5;
+    }
+    h1 { margin-bottom: 0.25rem; }
+    p.subtitle { color: var(--muted); margin-top: 0; margin-bottom: 2rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+    }
+    a.card {
+      display: block;
+      background: var(--card);
+      padding: 1.25rem;
+      border-radius: 8px;
+      text-decoration: none;
+      color: inherit;
+      border: 1px solid rgba(255,255,255,0.08);
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    a.card:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent);
+    }
+    .card h2 {
+      font-size: 1.1rem;
+      margin: 0 0 0.4rem 0;
+      color: var(--accent);
+    }
+    .card p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Browser Utilities</h1>
+  <p class="subtitle">Self-contained, client-side HTML tools.</p>
+
+  <div class="grid">
+    <a class="card" href="./svg_to_png_icon_generator.html">
+      <h2>SVG to PNG Icon Generator</h2>
+      <p>Convert and resize SVG vector graphics into PNG icons locally.</p>
+    </a>
+
+    <!-- Add new tools by duplicating this block -->
+    <a class="card" href="./another_tool.html">
+      <h2>Another Utility</h2>
+      <p>Short description of what this standalone HTML file does.</p>
+    </a>
+  </div>
+</body>
+</html>
